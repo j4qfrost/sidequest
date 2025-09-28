@@ -39,10 +39,6 @@ Quick steps:
 
 	flutter run -d <device>
 
-4. (Optional) Configure AT Protocol integration
-
-- Provide your AT Protocol service endpoints or keys in `assets/config.json` or through environment variables. See the code and platform-specific docs for details on how identity and posting are wired.
-
 ## Usage (end users)
 
 - Create or sign in with an AT Protocol-compatible identity.
