@@ -1,0 +1,17 @@
+when:
+  - event: pull_request
+  - event: push
+    branch: main
+
+# Flutter app. Pinned to stable channel; sidequest's pubspec uses
+# Dart >=3.10.0 which is on stable. If we later need exact 3.40.0-1.0.pre,
+# swap to a tagged image and add `flutter --version` to the matrix.
+
+steps:
+  analyze-and-test:
+    image: ghcr.io/cirruslabs/flutter:stable
+    commands:
+      - flutter pub get
+      - dart run build_runner build --delete-conflicting-outputs
+      - flutter analyze
+      - flutter test
