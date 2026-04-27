@@ -1,49 +1,66 @@
-import 'dart:async';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_bluesky/api/session.dart';
-import 'package:flutter_bluesky/data/assets.dart';
-import 'package:flutter_bluesky/screen/data/factory.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:tuple/tuple.dart';
-import 'package:flutter_bluesky/db/accessor.dart';
-import 'package:flutter_bluesky/flutter_bluesky.dart';
-import 'package:flutter_bluesky/login.dart';
-import 'package:flutter_bluesky/screen.dart';
-import 'package:flutter_bluesky/screen/home.dart';
-import 'package:flutter_bluesky/screen/me.dart';
-import 'package:flutter_bluesky/screen/notfifications.dart';
-import 'package:flutter_bluesky/screen/parts/button/button_manager.dart';
-import 'package:flutter_bluesky/screen/parts/timeline.dart';
-import 'package:flutter_bluesky/screen/parts/menu.dart';
-import 'package:flutter_bluesky/screen/post.dart';
-import 'package:flutter_bluesky/screen/profile/profile_content.dart';
-import 'package:flutter_bluesky/screen/settings.dart';
-import 'package:flutter_bluesky/screen/profile/edit_profile.dart';
-import 'package:flutter_bluesky/screen/provider.dart';
-import 'package:flutter_bluesky/screen/base.dart';
-import 'package:flutter_bluesky/screen/search.dart';
-import 'package:flutter_bluesky/screen/profile.dart';
-import 'package:flutter_bluesky/screen/thread.dart';
-import 'package:flutter_bluesky/screen/actors.dart';
-import 'package:flutter_bluesky/transition_route_observer.dart';
-import 'package:sidequest/sample_timeline.dart';
-// ignore: depend_on_referenced_packages
-import 'package:timeago/timeago.dart' as timeago;
+import 'package:atproto/core.dart';
+// import 'package:atproto/firehose.dart';
+// import 'package:atproto/com_atproto_sync_subscriberepos.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:sidequest/screens/home.dart';
+import 'package:sidequest/screens/login.dart';
+import 'package:sidequest/utills/adapters.dart';
 
-const _appName = "flutter_blusky";
-
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  initApp(_appName, const MainApp());
+  initApp('sidequest');
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+Future<void> initApp(String name) async {
+  await EasyLocalization.ensureInitialized();
+  await init();
+  PackageInfo packageInfo = await PackageInfo.fromPlatform();
+
+  final box = await Hive.openBox(packageInfo.appName);
+
+  runApp(
+    EasyLocalization(
+      supportedLocales: const [Locale('en', 'US'), Locale('ja', 'JP')],
+      path: 'assets/langs', // <-- change the path of the translation files
+      fallbackLocale: const Locale('ja', 'JP'),
+      child: MainApp(box: box),
+    ),
+  );
+}
+
+Future<void> init() async {
+  await initHive();
+  await dotenv.load(fileName: ".env");
+}
+
+Future<void> initHive() async {
+  await Hive.initFlutter();
+  Hive.registerAdapter(SessionAdapter());
+}
+
+class MainApp extends StatefulWidget {
+  const MainApp({super.key, required this.box});
+
+  final Box box;
+
+  @override
+  State<StatefulWidget> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
+  @override
+  void dispose() async {
+    super.dispose();
+    await Hive.close();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final Session? session = widget.box.get('session');
     return MaterialApp(
       // https://zenn.dev/kafumi/scraps/d7aeed260985cc
       // title: tr('title'),
@@ -59,97 +76,11 @@ class MainApp extends StatelessWidget {
           titleSmall: TextStyle(fontSize: 16),
         ),
       ),
-      navigatorObservers: [TransitionRouteObserver()],
-      initialRoute: initialRoute,
+      initialRoute: session == null ? LoginScreen.route : HomeScreen.route,
       routes: {
-        Provider.screen.route: (context) => const Provider(),
-        LoginScreen.route: (context) => const LoginScreen(),
-        Base.route: (context) => Base(),
-        Post.screen.route: (context) => const Post(),
-        Thread.screen.route: (context) => const Thread(),
-        Profile.screen.route: (context) => const Profile(),
-        EditProfile.screen.route: (context) => const EditProfile(),
-        Actors.screen.route: (context) => const Actors(),
+        LoginScreen.route: (context) => LoginScreen(box: widget.box),
+        HomeScreen.route: (context) => HomeScreen(box: widget.box),
       },
     );
   }
-}
-
-Future<void> init() async {
-  // TODO add other languages.
-  timeago.setLocaleMessages('ja', timeago.JaMessages());
-  await Assets.load();
-  await initHive();
-  await restoreSession();
-  initMenu();
-  await initScreen();
-}
-
-Future<void> initHive() async {
-  await Hive.initFlutter();
-  await openBox();
-}
-
-Future<void> restoreSession() async {
-  Map item = {};
-  if (isAlive) {
-    item = plugin.api.session.get;
-  } else {
-    for (MapEntry entry in Session.model.entries) {
-      item = entry.value;
-      setPlugin(FlutterBluesky(provider: item["provider"], key: item["key"]));
-      break;
-    }
-  }
-  if (item.isNotEmpty) {
-    plugin.api.session.set(item);
-    await plugin.connect();
-    await plugin.sessionAPI.refresh();
-  }
-}
-
-Future<void> initScreen() async {
-  PluggableWidget me = Me();
-  pluggables.add(Home());
-  pluggables.add(Search());
-  // for notification badge
-  Notifications notifications = Notifications();
-  if (hasSession) {
-    Tuple2 res = await plugin.sessionAPI.getSession();
-    if (res.item1 == 200) {
-      await notifications.init();
-    } else {
-      plugin.api.session.remove();
-    }
-  }
-  pluggables.add(notifications);
-  pluggables.add(me);
-  meIndex = pluggables.indexOf(me);
-  customPostTL = SamplePostTimeline();
-  buttonManager = DefaultButtonManager();
-  profileContent = ProfileContent();
-  managerFactory = ManagerFactory();
-}
-
-void initMenu() {
-  menus.add(
-    Menu(
-      prop: "Settings",
-      icon: Settings.screen.icon.icon!,
-      transfer: const Settings(),
-    ),
-  );
-}
-
-Future<void> initApp(String name, StatelessWidget appWidget) async {
-  await EasyLocalization.ensureInitialized();
-  await init();
-  runApp(
-    EasyLocalization(
-      supportedLocales: const [Locale('en', 'US'), Locale('ja', 'JP')],
-      path: 'assets/langs', // <-- change the path of the translation files
-      fallbackLocale: const Locale('ja', 'JP'),
-      child: appWidget,
-    ),
-  );
 }

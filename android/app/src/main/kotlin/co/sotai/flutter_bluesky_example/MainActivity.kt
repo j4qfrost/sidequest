@@ -1,4 +1,4 @@
-package co.sotai.flutter_bluesky_example
+package co.sotai.sidequest
 
 import io.flutter.embedding.android.FlutterActivity
 

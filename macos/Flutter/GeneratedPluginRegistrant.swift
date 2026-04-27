@@ -5,20 +5,22 @@
 import FlutterMacOS
 import Foundation
 
-import file_picker
-import file_selector_macos
-import flutter_bluesky
-import flutter_secure_storage_darwin
+import dart_duckdb
+import desktop_webview_window
+import flutter_web_auth_2
+import package_info_plus
 import path_provider_foundation
 import shared_preferences_foundation
 import url_launcher_macos
+import window_to_front
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
-  FileSelectorPlugin.register(with: registry.registrar(forPlugin: "FileSelectorPlugin"))
-  FlutterBlueskyPlugin.register(with: registry.registrar(forPlugin: "FlutterBlueskyPlugin"))
-  FlutterSecureStorageDarwinPlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStorageDarwinPlugin"))
+  DuckDBPlugin.register(with: registry.registrar(forPlugin: "DuckDBPlugin"))
+  DesktopWebviewWindowPlugin.register(with: registry.registrar(forPlugin: "DesktopWebviewWindowPlugin"))
+  FlutterWebAuth2Plugin.register(with: registry.registrar(forPlugin: "FlutterWebAuth2Plugin"))
+  FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
   UrlLauncherPlugin.register(with: registry.registrar(forPlugin: "UrlLauncherPlugin"))
+  WindowToFrontPlugin.register(with: registry.registrar(forPlugin: "WindowToFrontPlugin"))
 }
