@@ -7,6 +7,23 @@ when:
 # Dart >=3.10.0 which is on stable. If we later need exact 3.40.0-1.0.pre,
 # swap to a tagged image and add `flutter --version` to the matrix.
 
+clone:
+  git:
+    image: alpine/git
+    environment:
+      FORGEJO_USER:
+        from_secret: forgejo_user
+      FORGEJO_TOKEN:
+        from_secret: forgejo_token
+    commands:
+      - git init -b "${CI_COMMIT_BRANCH:-main}"
+      - >-
+        git fetch --depth=1 "http://$$FORGEJO_USER:$$FORGEJO_TOKEN@forgejo:3000/${CI_REPO}.git" "$$CI_COMMIT_SHA"
+        || git fetch --depth=1 "http://$$FORGEJO_USER:$$FORGEJO_TOKEN@forgejo:3000/${CI_REPO}.git" "$$CI_COMMIT_REF"
+        || git fetch --depth=1 "https://$$FORGEJO_USER:$$FORGEJO_TOKEN@git.legionofweird.dev/${CI_REPO}.git" "$$CI_COMMIT_SHA"
+        || git fetch --depth=1 "https://$$FORGEJO_USER:$$FORGEJO_TOKEN@git.legionofweird.dev/${CI_REPO}.git" "$$CI_COMMIT_REF"
+      - git checkout -qf FETCH_HEAD
+
 steps:
   analyze-and-test:
     image: ghcr.io/cirruslabs/flutter:stable
