@@ -19,6 +19,9 @@ class HomeScreenState extends State<HomeScreen> {
   late Session session;
   late ATProto atproto;
   final String fsqKey = dotenv.env['FSQ_KEY']!;
+  final String fsqIcebergEndpoint =
+      dotenv.env['FSQ_ICEBERG_ENDPOINT'] ??
+      'https://catalog.h3-hub.foursquare.com/iceberg';
   bool _isLoading = false;
 
   String? _errorMessage;
@@ -42,7 +45,7 @@ class HomeScreenState extends State<HomeScreen> {
         await conn.execute('''ATTACH 'places' AS places (
     TYPE iceberg,
     SECRET iceberg_secret,
-    ENDPOINT 'https://catalog.h3-hub.foursquare.com/iceberg'
+    ENDPOINT '$fsqIcebergEndpoint'
 );''');
 
         final result = await conn.query(
