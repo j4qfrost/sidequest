@@ -28,6 +28,8 @@ steps:
   analyze-and-test:
     image: ghcr.io/cirruslabs/flutter:stable
     commands:
+      # .env is a declared asset but gitignored; use the placeholder template in CI.
+      - cp -n .env.example .env
       - flutter pub get
       - dart run build_runner build --delete-conflicting-outputs
       - flutter analyze
