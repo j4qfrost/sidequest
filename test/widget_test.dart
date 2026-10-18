@@ -1,27 +1,58 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:io';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive.dart';
 
 import 'package:sidequest/main.dart';
 
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MainApp());
+  late Directory tempDir;
+  late Box box;
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    // easy_localization persists the locale via shared_preferences; stub the
+    // platform channel with an empty store so no plugin is needed in tests.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/shared_preferences'),
+          (MethodCall call) async =>
+              call.method == 'getAll' ? <String, Object>{} : true,
+        );
+    await EasyLocalization.ensureInitialized();
+  });
+
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('sidequest_test_');
+    Hive.init(tempDir.path);
+    box = await Hive.openBox('sidequest_test');
+  });
+
+  tearDown(() async {
+    await Hive.deleteFromDisk();
+    await tempDir.delete(recursive: true);
+  });
+
+  testWidgets('shows the login screen when no session is stored', (
+    WidgetTester tester,
+  ) async {
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        EasyLocalization(
+          supportedLocales: const [Locale('en', 'US'), Locale('ja', 'JP')],
+          path: 'assets/langs',
+          fallbackLocale: const Locale('ja', 'JP'),
+          child: MainApp(box: box),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bluesky Login'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
   });
 }
